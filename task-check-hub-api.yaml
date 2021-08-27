@@ -1,0 +1,39 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: check-api-status
+spec:
+  results:
+    - name: hub-api
+      description: status of hub
+  steps:
+    - name: check-api-status
+      image: quay.io/chmouel/github-app-token@sha256:bc45937ae588df876555ebb56c36350ed74592c7f55f2df255cabef39c926a88
+      script: |
+        #!/usr/bin/env python3
+        import requests
+
+        response = requests.get("https://api.hub.tekton.dev")
+        if (response.json()["services"][1]['status'] == "ok"):
+          print("Yoo!! Hub API works")
+          with open('/data/hub', 'w') as f:
+            f.write("Yoo!! Hub API works")
+      volumeMounts:
+        - name: data
+          mountPath: /data
+
+    - name: set-message
+      image: ubuntu
+      script: |
+        #!/usr/bin/env bash
+
+        captain=$(cat /data/hub)
+        message='Hi :wave: '${captain}''
+        echo ${message} > $(results.hub-api.path)
+      volumeMounts:
+        - name: data
+          mountPath: /data
+
+  volumes:
+    - name: data
+      emptyDir: {}
